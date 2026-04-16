@@ -137,10 +137,8 @@ export default function Home() {
   const filter = useTransform(smoothProgress, [0, 0.1, 1], ["brightness(0.3) blur(12px)", "brightness(1) blur(0px)", "brightness(1) blur(0px)"]);
   const carOpacity = useTransform(smoothProgress, [0, 0.05, 1], [0.2, 1, 1]);
 
-  // Parallax layers mapping
-  const lowerLayerY = useTransform(smoothProgress, [0, 1], [80, 0]);
-  const midLayerY = useTransform(smoothProgress, [0, 1], [40, 0]);
-  const topLayerY = useTransform(smoothProgress, [0, 1], [20, 0]);
+  // Parallax layers mapping (removed layers for performance, using single canvas)
+  const layerY = useTransform(smoothProgress, [0, 1], [40, 0]);
 
   const drawFrame = (canvas: HTMLCanvasElement | null, frameIndex: number) => {
     if (!canvas) return;
@@ -166,29 +164,26 @@ export default function Home() {
     ctx.fillRect(width - 250, height - 120, 250, 120);
   };
 
+  const lastFrameRef = useRef<number>(-1);
+
   useMotionValueEvent(smoothProgress, "change", (latest) => {
     if (!isLoaded) return;
 
-    // Audio handles dynamically by scrollVelocity
+    const clampedLatest = Math.max(0, Math.min(1, latest));
+    const rawFrame = clampedLatest * (totalFrames - 1);
+    const exactFrame = Math.round(rawFrame) + 1;
 
-    // Force browser to render this explicitly on the next animation frame for max performance
+    if (exactFrame === lastFrameRef.current) return;
+    lastFrameRef.current = exactFrame;
+
     requestAnimationFrame(() => {
-      const clampedLatest = Math.max(0, Math.min(1, latest));
-      const rawFrame = clampedLatest * (totalFrames - 1);
-      const exactFrame = Math.round(rawFrame) + 1; // Snap to nearest frame to prevent motion blur ghosting
-
-      // Bypass React state - draw instantly via Canvas WebGL
-      drawFrame(canvas1Ref.current, exactFrame);
-      drawFrame(canvas2Ref.current, exactFrame);
       drawFrame(canvas3Ref.current, exactFrame);
     });
   });
 
-  // Re-draw frame 1 exactly once when loading completes
+  // Re-draw initial frame when loading completes
   useEffect(() => {
     if (isLoaded) {
-      drawFrame(canvas1Ref.current, 1);
-      drawFrame(canvas2Ref.current, 1);
       drawFrame(canvas3Ref.current, 1);
     }
   }, [isLoaded]);
@@ -220,36 +215,15 @@ export default function Home() {
               style={{
                 scale,
                 rotateX,
-                filter,
                 opacity: carOpacity,
+                y: layerY
               }}
-              className="relative w-full h-[100vh] flex items-center justify-center pointer-events-none z-10 [transform-style:preserve-3d]"
+              className="relative w-full h-[100vh] flex items-center justify-center pointer-events-none z-10"
             >
-              {/* Layer 1 - Bottom component layer */}
-              <motion.div
-                style={{ y: lowerLayerY }}
-                className="absolute inset-0 flex items-center justify-center z-[1] select-none opacity-30 blur-[2px] [transform:translateZ(-100px)]"
-              >
-                <canvas ref={canvas1Ref} className="max-w-[100%] md:max-w-[80vw] lg:max-w-[1200px] w-full h-auto object-contain mix-blend-screen" />
-              </motion.div>
-
-              {/* Layer 2 - Mid component layer */}
-              <motion.div
-                style={{ y: midLayerY }}
-                className="absolute inset-0 flex items-center justify-center z-[2] select-none opacity-60 blur-[1px] [transform:translateZ(-50px)]"
-              >
-                <canvas ref={canvas2Ref} className="max-w-[100%] md:max-w-[80vw] lg:max-w-[1200px] w-full h-auto object-contain mix-blend-screen" />
-              </motion.div>
-
-              {/* Layer 3 - Top layer */}
-              <motion.div
-                style={{ y: topLayerY }}
-                className="absolute inset-0 flex items-center justify-center z-[3] select-none [transform:translateZ(0px)]"
-              >
-                <canvas ref={canvas3Ref} className="max-w-[100%] md:max-w-[80vw] lg:max-w-[1200px] w-full h-auto object-contain mix-blend-screen" />
-              </motion.div>
-
-              {/* (Removed Interior View button layout) */}
+              <canvas 
+                ref={canvas3Ref} 
+                className="max-w-[100%] md:max-w-[80vw] lg:max-w-[1200px] w-full h-auto object-contain mix-blend-screen" 
+              />
 
               {/* Soft red glow shadow beneath the car */}
               <div className="absolute top-[65%] w-[80%] md:w-[60%] h-[10%] bg-red-600/10 blur-[60px] z-0 rounded-[100%]" />

@@ -12,6 +12,7 @@ const COLORS = [
     { id: "yellow", name: "Racing Yellow", price: 300_000, hex: "#f2c511", filter: "hue-rotate(45deg) saturate(1.5)" },
     { id: "silver", name: "GT Silver Metallic", price: 350_000, hex: "#b3b6b7", filter: "grayscale(0.8) brightness(1.2)" },
     { id: "white", name: "Chalk White", price: 200_000, hex: "#e8e8e6", filter: "brightness(1.5) grayscale(1)" },
+    { id: "blue", name: "Shark Blue", price: 450_000, hex: "#007bc0", filter: "hue-rotate(210deg) saturate(1.2) brightness(0.9)" },
 ];
 
 const WHEELS = [
@@ -42,6 +43,7 @@ const AI_TIPS: Record<string, string> = {
     yellow: "Racing Yellow shines with Beige Leather — bold contrast.",
     silver: "GT Silver with Bordeaux Red interior — timeless prestige.",
     white: "Chalk White looks stunning with Carbon Fiber Trim.",
+    blue: "Shark Blue is a racing icon — pair it with Sport Design wheels.",
 };
 
 const CAR_MODELS = [
@@ -130,7 +132,7 @@ function ConfigureContent() {
     const modelIndex = parseInt(searchParams.get("model") || "0", 10);
     const carModel = CAR_MODELS[isNaN(modelIndex) ? 0 : modelIndex] || CAR_MODELS[0];
 
-    const [color, setColor] = useState(COLORS[0]);
+    const [color, setColor] = useState(COLORS[5] || COLORS[0]); // Shark Blue as default if available (it is at index 5)
     const [wheel, setWheel] = useState(WHEELS[0]);
     const [interior, setInterior] = useState(INTERIORS[0]);
     const [packages, setPackages] = useState<Set<string>>(new Set());
@@ -753,7 +755,16 @@ function ConfigureContent() {
 
                 <div className="px-7 pb-6">
                     <button
-                        className="w-full py-4 rounded text-[11px] tracking-[0.22em] uppercase font-medium"
+                        onClick={(e) => {
+                            const btn = e.currentTarget;
+                            btn.innerText = "Processing...";
+                            setTimeout(() => {
+                                btn.innerText = "Request Received ✓";
+                                btn.style.background = "#059669"; // Green
+                                setTimeout(() => setShowSummary(false), 2000);
+                            }, 1500);
+                        }}
+                        className="w-full py-4 rounded text-[11px] tracking-[0.22em] uppercase font-medium transition-all duration-300 hover:brightness-110 active:scale-[0.98]"
                         style={{ background: "#d31e28", color: "white" }}
                     >
                         Request a Call Back

@@ -41,8 +41,8 @@ const Showroom = dynamic(() => import("./Showroom"), {
 // ─── Nav items ─────────────────────────────────────────────────────────────────
 const NAV_LINKS = [
     { label: "Home", href: "/", icon: "⌂" },
-    { label: "Experience", href: "/#experience", icon: null },
-    { label: "Performance", href: "/#performance", icon: null },
+    // { label: "Experience", href: "/#experience", icon: null },
+    // { label: "Performance", href: "/#performance", icon: null },
 ];
 
 export default function Navbar() {
@@ -395,7 +395,7 @@ export default function Navbar() {
             </AnimatePresence>
 
             {/* ─── AR Overlay ────────────────────────────────────────────────── */}
-            {/* <AROverlay isOpen={arOpen} onClose={() => setArOpen(false)} /> */}
+            <AROverlay isOpen={arOpen} onClose={() => setArOpen(false)} />
 
 
         </>

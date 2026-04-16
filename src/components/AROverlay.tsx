@@ -86,6 +86,14 @@ export default function AROverlay({ isOpen, onClose }: AROverlayProps) {
                                     <p className="text-white/30 text-[10px] leading-relaxed max-w-[200px]">
                                         Scan this code with your smartphone camera to launch the interactive AR viewer.
                                     </p>
+                                    {pageUrl.includes("localhost") && (
+                                        <div className="mt-4 p-3 bg-red-600/10 border border-red-600/20 rounded-md text-left">
+                                            <p className="text-red-500 text-[9px] tracking-widest uppercase mb-1 font-bold">Connection Note:</p>
+                                            <p className="text-white/60 text-[9px] leading-relaxed uppercase">
+                                                Scanning from a phone? Ensure you use your computer's local IP (e.g., 192.168.x.x:3000) instead of localhost for the phone to connect to this server.
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             </motion.div>
 
