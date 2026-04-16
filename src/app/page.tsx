@@ -1,14 +1,10 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import { motion, AnimatePresence, useScroll, useTransform, useMotionValueEvent, useSpring } from "framer-motion";
+import { motion, AnimatePresence, useScroll, useTransform, useMotionValueEvent, useSpring, useVelocity } from "framer-motion";
 import Lenis from "lenis";
-import dynamic from "next/dynamic";
 
-const InteriorViewer = dynamic(() => import("../components/InteriorViewer"), {
-  ssr: false,
-  loading: () => <div className="h-screen w-full bg-black flex items-center justify-center text-white/20 uppercase tracking-widest text-xs">Initializing Cabin View...</div>
-});
+
 
 export default function Home() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -22,7 +18,6 @@ export default function Home() {
   const [isLoaded, setIsLoaded] = useState(false);
 
   const totalFrames = 240;
-  const [showInterior, setShowInterior] = useState(false);
 
   // Initialize Lenis for hardware-accelerated scroll interception
   useEffect(() => {
@@ -79,11 +74,12 @@ export default function Home() {
     loadImages();
   }, []);
 
-  // Map directly to Lenis scroll
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ["start start", "end end"]
   });
+
+  const scrollVelocity = useVelocity(scrollYProgress);
 
   // Apply spring physics to deeply decouple rendering from the mouse wheel
   const smoothProgress = useSpring(scrollYProgress, {
@@ -91,6 +87,47 @@ export default function Home() {
     damping: 20,
     restDelta: 0.001
   });
+
+  // Audio control based on scroll velocity and position
+  useMotionValueEvent(scrollVelocity, "change", (latestVelocity) => {
+    if (!isLoaded || !audioRef.current) return;
+
+    // Convert velocity to an absolute value for speed/volume (ignoring direction)
+    const speed = Math.abs(latestVelocity);
+
+    if (speed < 0.005) {
+      // Extremely slow or stopped -> pause audio
+      if (!audioRef.current.paused) {
+        audioRef.current.pause();
+      }
+    } else {
+      // Scrolling -> ensure it's playing
+      if (audioRef.current.paused) {
+        audioRef.current.play().catch(() => { });
+      }
+
+      // Calculate dynamic playback rate and volume relative to scroll speed
+      // Base rate is 0.7, max rate around 2.0 when scrolling fast
+      const targetRate = Math.min(2.0, 0.7 + (speed * 10));
+      // Target volume depends both on speed and scroll depth
+      const depthScale = Math.max(0, Math.min(1, scrollYProgress.get() * 2));
+      const targetVolume = Math.min(1.0, 0.3 + (speed * 5)) * depthScale;
+
+      // Smooth out audio transitions
+      audioRef.current.playbackRate = targetRate;
+      audioRef.current.volume = targetVolume;
+    }
+  });
+
+  // Audio mute fallback when component unmounts
+  useEffect(() => {
+    const audio = audioRef.current;
+    return () => {
+      if (audio) {
+        audio.pause();
+      }
+    };
+  }, []);
 
   // Parent 3D container mapped properties
   const scale = useTransform(smoothProgress, [0, 1], [1.1, 1]);
@@ -132,13 +169,7 @@ export default function Home() {
   useMotionValueEvent(smoothProgress, "change", (latest) => {
     if (!isLoaded) return;
 
-    if (audioRef.current) {
-      if (audioRef.current.paused) {
-        audioRef.current.play().catch(() => { });
-      }
-      // Clamp volume strictly between 0 and 1 to prevent IndexSizeError on spring overshoot
-      audioRef.current.volume = Math.max(0, Math.min(1, 0.2 + latest * 0.8));
-    }
+    // Audio handles dynamically by scrollVelocity
 
     // Force browser to render this explicitly on the next animation frame for max performance
     requestAnimationFrame(() => {
@@ -176,7 +207,8 @@ export default function Home() {
         </div>
       )}
 
-      <main className="bg-black min-h-screen text-white relative">
+      <main id="experience" className="bg-black min-h-screen text-white relative">
+
         {/* 800vh gives a massive scroll track for butter-smooth interactions */}
         <div className="h-[800vh]" ref={containerRef}>
           <div className="sticky top-0 h-screen w-full flex items-center justify-center overflow-hidden [perspective:1200px]">
@@ -217,26 +249,7 @@ export default function Home() {
                 <canvas ref={canvas3Ref} className="max-w-[100%] md:max-w-[80vw] lg:max-w-[1200px] w-full h-auto object-contain mix-blend-screen" />
               </motion.div>
 
-              {/* Invisible click overlay on top — triggers interior entry */}
-              <motion.button
-                onClick={() => isLoaded && setShowInterior(true)}
-                style={{ opacity: useTransform(smoothProgress, [0.5, 0.7], [0, 1]) }}
-                className="absolute inset-0 z-[10] cursor-pointer group flex flex-col items-center justify-end pb-[18%] pointer-events-auto"
-                aria-label="Step inside the cockpit"
-              >
-                <motion.div
-                  animate={{ y: [0, -6, 0], opacity: [0.6, 1, 0.6] }}
-                  transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-                  className="flex flex-col items-center gap-2"
-                >
-                  <div className="w-8 h-8 rounded-full border border-white/30 flex items-center justify-center backdrop-blur-sm bg-black/20 group-hover:border-white/60 group-hover:bg-white/10 transition-all duration-500">
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                      <path d="M7 2v10M3 8l4 4 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </div>
-                  <span className="text-[9px] tracking-[0.3em] uppercase text-white/40 font-light">Step Inside</span>
-                </motion.div>
-              </motion.button>
+              {/* (Removed Interior View button layout) */}
 
               {/* Soft red glow shadow beneath the car */}
               <div className="absolute top-[65%] w-[80%] md:w-[60%] h-[10%] bg-red-600/10 blur-[60px] z-0 rounded-[100%]" />
@@ -284,38 +297,35 @@ export default function Home() {
               />
             </div>
 
+            {/* AR Feature CTA */}
+            <div className="absolute bottom-[5%] right-8 z-30 pointer-events-auto">
+               <motion.button
+                 whileHover={{ scale: 1.05 }}
+                 className="flex items-center gap-3 px-4 py-2 bg-white/5 backdrop-blur-md border border-white/10 rounded-full hover:bg-white/10 transition-all duration-300"
+                 onClick={() => {
+                   // This will be handled by the Navbar state if we pass it, 
+                   // but for now let's just make it a link to indicate the feature exists
+                   window.dispatchEvent(new CustomEvent('open-ar-overlay'));
+                 }}
+               >
+                 <div className="w-2 h-2 bg-red-600 rounded-full">
+                    <div className="w-full h-full bg-red-600 rounded-full animate-ping" />
+                 </div>
+                 <span className="text-[10px] tracking-[0.2em] uppercase text-white/80">Launch AR</span>
+               </motion.button>
+            </div>
+
+
           </div>
         </div>
 
+
         {/* Optional ambient audio */}
         <audio ref={audioRef} loop className="hidden" aria-hidden="true" playsInline>
-          <source src="#" type="audio/mpeg" />
+          <source src="/porsche_audio.mp4" type="audio/mp4" />
         </audio>
       </main>
 
-      {/* ── Interior Overlay ─────────────────────────────── */}
-      <AnimatePresence>
-        {showInterior && (
-          <motion.div
-            key="interior"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.6, ease: "easeInOut" }}
-            className="fixed inset-0 z-[200] bg-black"
-          >
-            {/* Zoom-in entry mask */}
-            <motion.div
-              initial={{ scale: 2.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-              className="w-full h-full"
-            >
-              <InteriorViewer onClose={() => setShowInterior(false)} />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </>
   );
 }

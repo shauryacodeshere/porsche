@@ -2,82 +2,11 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
-import { Html, Sphere } from "@react-three/drei";
+import { Html, OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import { motion, AnimatePresence } from "framer-motion";
 
-// ─── Smooth Camera Orbit ──────────────────────────────────────────────────────
-function SmoothOrbit() {
-    const { camera, gl } = useThree();
-    const isDragging = useRef(false);
-    const lastPointer = useRef({ x: 0, y: 0 });
-    const targetTheta = useRef(0);
-    const targetPhi = useRef(Math.PI / 2);
-    const currentTheta = useRef(0);
-    const currentPhi = useRef(Math.PI / 2);
-    const velocity = useRef({ x: 0, y: 0 });
-
-    useEffect(() => {
-        const el = gl.domElement;
-        const onPointerDown = (e: PointerEvent) => {
-            isDragging.current = true;
-            lastPointer.current = { x: e.clientX, y: e.clientY };
-            velocity.current = { x: 0, y: 0 };
-            el.setPointerCapture(e.pointerId);
-        };
-        const onPointerMove = (e: PointerEvent) => {
-            if (!isDragging.current) return;
-            const dx = e.clientX - lastPointer.current.x;
-            const dy = e.clientY - lastPointer.current.y;
-            lastPointer.current = { x: e.clientX, y: e.clientY };
-            velocity.current = { x: dx, y: dy };
-            targetTheta.current -= dx * 0.003;
-            targetPhi.current -= dy * 0.003;
-            targetPhi.current = Math.max(0.3, Math.min(Math.PI - 0.3, targetPhi.current));
-        };
-        const onPointerUp = () => { isDragging.current = false; };
-        const onWheel = (e: WheelEvent) => { e.stopPropagation(); };
-
-        el.addEventListener("pointerdown", onPointerDown);
-        el.addEventListener("pointermove", onPointerMove);
-        el.addEventListener("pointerup", onPointerUp);
-        el.addEventListener("pointercancel", onPointerUp);
-        el.addEventListener("wheel", onWheel, { passive: false });
-        return () => {
-            el.removeEventListener("pointerdown", onPointerDown);
-            el.removeEventListener("pointermove", onPointerMove);
-            el.removeEventListener("pointerup", onPointerUp);
-            el.removeEventListener("pointercancel", onPointerUp);
-            el.removeEventListener("wheel", onWheel);
-        };
-    }, [gl]);
-
-    // Gentle auto-rotate when idle
-    useEffect(() => {
-        const id = setInterval(() => {
-            if (!isDragging.current) targetTheta.current += 0.0005;
-        }, 16);
-        return () => clearInterval(id);
-    }, []);
-
-    useFrame(() => {
-        if (!isDragging.current) {
-            velocity.current.x *= 0.92;
-            velocity.current.y *= 0.92;
-            targetTheta.current -= velocity.current.x * 0.001;
-            targetPhi.current -= velocity.current.y * 0.001;
-            targetPhi.current = Math.max(0.3, Math.min(Math.PI - 0.3, targetPhi.current));
-        }
-        currentTheta.current += (targetTheta.current - currentTheta.current) * 0.08;
-        currentPhi.current += (targetPhi.current - currentPhi.current) * 0.08;
-        const x = Math.sin(currentPhi.current) * Math.cos(currentTheta.current);
-        const y = Math.cos(currentPhi.current);
-        const z = Math.sin(currentPhi.current) * Math.sin(currentTheta.current);
-        camera.lookAt(x, y, z);
-    });
-
-    return null;
-}
+// ─── Native Orbit Controls used instead ────────────────────────────────────
 
 // ─── Panoramic Sphere ─────────────────────────────────────────────────────────
 function PanoSphere() {
@@ -276,7 +205,7 @@ export default function InteriorViewer({ onClose }: InteriorViewerProps) {
                 style={{ position: "absolute", inset: 0 }}
             >
                 <PanoSphere />
-                <SmoothOrbit />
+                <OrbitControls enableZoom={false} enablePan={false} rotateSpeed={-0.6} autoRotate autoRotateSpeed={0.5} makeDefault />
                 <Hotspot
                     position={[120, -80, -480]}
                     title="Engine Start"
