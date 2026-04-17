@@ -1,5 +1,6 @@
 // @ts-nocheck
 "use client";
+export const dynamic = "force-dynamic";
 
 import Script from "next/script";
 import { MoveLeft } from "lucide-react";
