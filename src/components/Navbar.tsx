@@ -85,7 +85,7 @@ export default function Navbar() {
             try {
                 const isNavReload = window.performance && window.performance.navigation && window.performance.navigation.type === 1;
                 const entries = window.performance ? window.performance.getEntriesByType("navigation") : [];
-                const isEntryReload = entries.length > 0 && (entries[0] as PerformanceNavigationTiming).type === "reload";
+                const isEntryReload = entries.length > 0 && (entries[0] as any).type === "reload";
 
                 if ((isNavReload || isEntryReload) && window.location.pathname !== "/") {
                     window.location.href = "/";

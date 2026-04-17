@@ -162,7 +162,7 @@ export default function Showroom({ onClose }: { onClose?: () => void }) {
                     userSelect: "none",
                     cursor: "grab",
                 }}
-                {...(bind() as object)}
+                {...(bind() as any)}
             >
                 <AnimatePresence initial={false}>
                     {MODELS.map((m, i) => {
